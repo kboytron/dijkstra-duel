@@ -10,7 +10,8 @@
 body {
   background-color: var(--background-dark);
   color: var(--text-white);
-  font-family: 'Roboto', Arial, sans-serif; /* Updated font */
+  font-family: 'Roboto', Arial, sans-serif;
+  /* Updated font */
   margin: 0;
 }
 

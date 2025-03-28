@@ -1,6 +1,5 @@
 import BinaryHeap from "../utils/BinaryHeap";
 
-// Helper function to build an adjacency list from the graph
 const buildAdjacencyList = (graph) => {
   const adjList = new Array(graph.nodes.length).fill(null).map(() => []);
   for (const edge of graph.edges) {
@@ -9,7 +8,7 @@ const buildAdjacencyList = (graph) => {
   return adjList;
 };
 
-export const dijkstraPriorityQueue = (graph, start, end) => {
+export const dijkstraPriorityQueue = (graph, start) => {
   const nodes = graph.nodes.map((node) => node.id);
   const distances = new Array(nodes.length).fill(Infinity);
   const previous = new Array(nodes.length).fill(null);
@@ -29,41 +28,16 @@ export const dijkstraPriorityQueue = (graph, start, end) => {
     const minNode = minItem.node;
     totalOperations += ops;
 
-    totalOperations++; // Count the comparison for checking if visited
+    totalOperations++;
     if (visited[minNode]) continue;
 
     visited[minNode] = true;
-
-    totalOperations++; // Count the comparison for checking if minNode === end
-    if (minNode === end) {
-      const path = [];
-      let current = end;
-      while (current !== null) {
-        path.push(current);
-        current = previous[current];
-      }
-      path.reverse();
-
-      if (path[0] !== start) return { steps, path: null, distance: Infinity };
-
-      steps.push({
-        visited: visited.filter((v, idx) => v).map((_, idx) => idx),
-        currentNode: null,
-        edges: [],
-        operations: totalOperations,
-        path,
-        distance: distances[end],
-        action: `Path found: ${path.join(" -> ")}`,
-      });
-
-      return { steps, path, distance: distances[end] };
-    }
 
     const exploredEdges = [];
     for (const { to: neighbor, weight, id } of adjList[minNode]) {
       const newDist = distances[minNode] + weight;
 
-      totalOperations++; // Count the comparison for checking if newDist < distances[neighbor]
+      totalOperations++;
       if (newDist < distances[neighbor]) {
         distances[neighbor] = newDist;
         previous[neighbor] = minNode;
@@ -82,25 +56,5 @@ export const dijkstraPriorityQueue = (graph, start, end) => {
     });
   }
 
-  const path = [];
-  let current = end;
-  while (current !== null) {
-    path.push(current);
-    current = previous[current];
-  }
-  path.reverse();
-
-  if (path[0] !== start) return { steps, path: null, distance: Infinity };
-
-  steps.push({
-    visited: visited.filter((v, idx) => v).map((_, idx) => idx),
-    currentNode: null,
-    edges: [],
-    operations: totalOperations,
-    path,
-    distance: distances[end],
-    action: `Path found: ${path.join(" -> ")}`,
-  });
-
-  return { steps, path, distance: distances[end] };
+  return { steps, distances, previous, operations: totalOperations };
 };

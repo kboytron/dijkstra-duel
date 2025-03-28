@@ -3,26 +3,25 @@
 import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 
-// Dynamically import the Graph component with SSR disabled
 const Graph = dynamic(() => import("react-graph-vis"), { ssr: false });
 
-const GraphVisualizer = ({ graph, identifier, numNodes, steps, animationSpeed, isRunning, startNode, endNode, onStepChange, nodePositions }) => {
+const GraphVisualizer = ({ graph, identifier, numNodes, steps, animationSpeed, isRunning, startNode, onStepChange, nodePositions, sptEdges }) => {
   const [currentStep, setCurrentStep] = useState(-1);
   const [startTime, setStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
 
-  // Reset the animation when isRunning changes
   useEffect(() => {
     if (isRunning) {
       setCurrentStep(-1);
       setStartTime(Date.now());
       setElapsedTime(0);
       setIsFinished(false);
+    } else {
+      setCurrentStep(-1);
     }
   }, [isRunning]);
 
-  // Update elapsed time every 100ms, but stop when finished
   useEffect(() => {
     if (!isRunning || !startTime || isFinished) return;
 
@@ -33,7 +32,6 @@ const GraphVisualizer = ({ graph, identifier, numNodes, steps, animationSpeed, i
     return () => clearInterval(interval);
   }, [isRunning, startTime, isFinished]);
 
-  // Animate the steps (independent for each graph)
   useEffect(() => {
     if (!isRunning || !steps || steps.length === 0) return;
 
@@ -42,9 +40,8 @@ const GraphVisualizer = ({ graph, identifier, numNodes, steps, animationSpeed, i
       const prevStep = currentStep >= 0 ? steps[currentStep] : null;
       const operationsInStep = prevStep ? step.operations - prevStep.operations : step.operations;
 
-      // Scale the animation time based on the number of operations in this step
-      const baseTime = animationSpeed; // 300ms as the base time
-      const scaledTime = Math.max(100, baseTime * (operationsInStep / 50)); // Scale based on operations, with a minimum of 100ms
+      const baseTime = animationSpeed;
+      const scaledTime = Math.max(100, baseTime * (operationsInStep / 50));
 
       const timer = setTimeout(() => {
         setCurrentStep(currentStep + 1);
@@ -56,18 +53,15 @@ const GraphVisualizer = ({ graph, identifier, numNodes, steps, animationSpeed, i
     }
   }, [currentStep, steps, animationSpeed, isRunning, startTime]);
 
-  // Report the current step to the parent
   useEffect(() => {
     if (onStepChange) {
       onStepChange(currentStep);
     }
   }, [currentStep, onStepChange]);
 
-  // Get the current number of operations and final distance
-  const currentOperations = steps && steps[currentStep] ? steps[currentStep].operations : 0;
-  const finalDistance = steps && steps[steps.length - 1] ? steps[steps.length - 1].distance : null;
+  const currentOperations = steps && currentStep >= 0 && currentStep < steps.length && steps[currentStep] ? steps[currentStep].operations : 0;
 
-  // Prepare the graph data for rendering
+
   const currentGraph = { nodes: [], edges: [] };
 
   currentGraph.nodes = graph.nodes.map((node) => {
@@ -80,9 +74,6 @@ const GraphVisualizer = ({ graph, identifier, numNodes, steps, animationSpeed, i
     if (node.id === startNode) {
       color = { background: "#00ff00", border: "#333333" };
     }
-    if (node.id === endNode) {
-      color = { background: "#ff0000", border: "#333333" };
-    }
     return { ...node, color, x, y };
   });
 
@@ -91,14 +82,12 @@ const GraphVisualizer = ({ graph, identifier, numNodes, steps, animationSpeed, i
     color: "#888888",
   }));
 
-  // Apply highlights based on the current step
-  if (steps && steps.length > 0 && currentStep >= 0 && steps[currentStep]) {
+  if (steps && steps.length > 0 && currentStep >= 0 && currentStep < steps.length && steps[currentStep]) {
     const { visited, currentNode, edges: exploredEdges } = steps[currentStep];
 
-    // Update colors for visited nodes
     visited.forEach((nodeId) => {
-      if (nodeId !== startNode && nodeId !== endNode) {
-        const node = currentGraph.nodes.find(n => n.id === nodeId);
+      if (nodeId !== startNode) {
+        const node = currentGraph.nodes.find((n) => n.id === nodeId);
         if (node) {
           node.color = {
             background: "transparent",
@@ -109,9 +98,8 @@ const GraphVisualizer = ({ graph, identifier, numNodes, steps, animationSpeed, i
       }
     });
 
-    // Update color for the current node
-    if (currentNode !== null && currentNode !== startNode && currentNode !== endNode) {
-      const node = currentGraph.nodes.find(n => n.id === currentNode);
+    if (currentNode !== null && currentNode !== startNode) {
+      const node = currentGraph.nodes.find((n) => n.id === currentNode);
       if (node) {
         node.color = {
           background: "transparent",
@@ -122,29 +110,22 @@ const GraphVisualizer = ({ graph, identifier, numNodes, steps, animationSpeed, i
       }
     }
 
-    // Highlight explored edges
     exploredEdges.forEach(({ id }) => {
       const edge = currentGraph.edges.find((e) => e.id === id);
       if (edge) {
-        edge.color = "#00b7eb";
+        edge.color = "#00b7eb"; 
         edge.width = 2;
       }
     });
 
-    // Highlight the final path (only in the correct direction)
-    if (currentStep === steps.length - 1 && steps[currentStep].path) {
-      const path = steps[currentStep].path;
-      for (let i = 0; i < path.length - 1; i++) {
-        const from = path[i];
-        const to = path[i + 1];
-        const edge = currentGraph.edges.find(
-          (e) => e.from === from && e.to === to
-        );
+    if (currentStep === steps.length - 1 && sptEdges && sptEdges.length > 0) {
+      sptEdges.forEach(({ id }) => {
+        const edge = currentGraph.edges.find((e) => e.id === id);
         if (edge) {
-          edge.color = "#00b7eb";
+          edge.color = "#00b7eb"; 
           edge.width = 3;
         }
-      }
+      });
     }
   }
 
@@ -154,11 +135,11 @@ const GraphVisualizer = ({ graph, identifier, numNodes, steps, animationSpeed, i
       improvedLayout: false,
     },
     edges: {
-      font: { 
+      font: {
         color: "#ffffff",
         size: 16,
         strokeWidth: 1,
-        strokeColor: "#000000"
+        strokeColor: "#000000",
       },
       smooth: { type: "continuous" },
     },
@@ -177,9 +158,6 @@ const GraphVisualizer = ({ graph, identifier, numNodes, steps, animationSpeed, i
     <div style={{ width: "100%" }}>
       <div style={{ color: "#ffffff", textAlign: "center", marginBottom: "10px" }}>
         Time: {(elapsedTime / 1000).toFixed(2)}s | Operations: {currentOperations}
-        {isFinished && finalDistance !== null && finalDistance !== Infinity && (
-          <> | Distance: {finalDistance}</>
-        )}
       </div>
       <Graph
         key={`graph-${identifier}-${numNodes}`}
