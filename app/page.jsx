@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { Analytics } from "@vercel/analytics/react"
 import Header from "../components/Header";
 import GraphVisualizer from "../components/GraphVisualizer";
 import Controls from "../components/Controls";
@@ -213,6 +214,7 @@ export default function Home() {
           </p>
         </footer>
       </main>
+      <Analytics />
     </>
   );
 }
